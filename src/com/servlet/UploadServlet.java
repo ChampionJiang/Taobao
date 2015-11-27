@@ -35,40 +35,65 @@ public class UploadServlet extends HttpServlet{
 				, "jdbc:mysql://localhost:3306/Merchant"
 				, "root" , "");
 		try {
-			SmartUpload su = new SmartUpload();
-			su.init(req, resp);
-			su.setAllowedFilesList("jpg,jpeg,png,gif");
-			su.upload();
-			
-			Request request = su.getRequest();
-			ResultSet rs = null;
-			String tableName = "Product";
-			//System.out.println(request.getParameter("product"));
-			String name = new String(request.getParameter("product"));
-			double price = Double.valueOf(request.getParameter("price"));
-			int currency = Integer.valueOf(request.getParameter("currency"));
-			int quantity = Integer.valueOf(request.getParameter("quantity"));
-			double buy = Double.valueOf(request.getParameter("buy"));
-			double sell = Double.valueOf(request.getParameter("sell"));
-			String root = req.getSession().getServletContext().getRealPath("/");
-			String photo_path = this.uploadImage(su, root);
-			String website = new String(request.getParameter("website"));
-			
+			String para1 = req.getParameter("product_sell");
+			String para2 = req.getParameter("price_sell");
+			String para3 = req.getParameter("quantity_sell");
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
 			String date = sdf.format(new Date());
 			
-			//System.out.println(website.getBytes());
-			System.out.println(name+ " "+ price+ " "+currency+" "+
-			quantity+" "+buy+" "+ sell+ " "+photo_path+" "+ website+ " " + date);
+			if (para1 != null && para2 != null && para3 != null) {
+				String product = new String(para1.getBytes("ISO-8859-1"), "utf-8");
+				double price = Double.valueOf(new String(para2.getBytes("ISO-8859-1"), "utf-8"));
+				int quantity = Integer.valueOf(new String(para3.getBytes("ISO-8859-1"), "utf-8"));
+				String comment = new String(req.getParameter("comment").getBytes("ISO-8859-1"), "utf-8");
+				int id = 0;
+				String sql = "select id from Product where name like \"%"+product+"%\"";
+				System.out.println(sql);
+				ResultSet rs = dd.query(sql);
+				if (rs.next())
+				{
+					id = rs.getInt(1);
+					
+					sql = "insert into Sales (product_id, price, quantity, sell_date, comment) values (?,?,?,?,?)";
+					
+					dd.insert(sql, id, price, quantity, date, comment);
+					
+				}
+				
+				dd.closeConn();
+				
+			} else {
 			
-			dd.insert("insert into "+tableName+
-					" (name, price, currency, buy, sell, quantity, photo, website, date_ci) "
-					+ "values (?, ?, ?, ?, ?, ?, ?, ?, ?)", name, price, currency, buy, sell,
-					quantity, photo_path, website, new Date());
+				SmartUpload su = new SmartUpload();
+				su.init(req, resp);
+				su.setAllowedFilesList("jpg,jpeg,png,gif");
+				su.upload();
+
+				Request request = su.getRequest();
+				String tableName = "Product";
+				// System.out.println(request.getParameter("product"));
+				String name = new String(request.getParameter("product"));
+				int currency = Integer.valueOf(request.getParameter("currency"));
+				int quantity = Integer.valueOf(request.getParameter("quantity"));
+				double buy = Double.valueOf(request.getParameter("buy"));
+				String root = req.getSession().getServletContext().getRealPath("/");
+				String photo_path = this.uploadImage(su, root);
+				String website = new String(request.getParameter("website"));
+
+				// System.out.println(website.getBytes());
+				System.out.println(name + " " + currency + " " + quantity + " " + buy + " " + " " + photo_path + " "
+						+ website + " " + date);
+
+				dd.insert(
+						"insert into " + tableName + " (name, currency, buy, quantity, photo, website, date_ci) "
+								+ "values (?, ?, ?, ?, ?, ?, ?)",
+						name, currency, buy, quantity, photo_path, website, new Date());
+
+				dd.closeConn();
+			}
 			
+			QueryServlet.processRequest(req, resp);
 			
-			
-			req.getRequestDispatcher( "main.jsp").forward(req,resp);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
